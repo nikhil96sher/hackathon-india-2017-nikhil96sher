@@ -27,13 +27,15 @@ class Traveller(models.Model):
 
 #Need to combine some reportings into an information with a relevant trust score algorithm
 class Report(models.Model):
-	reporting_time = models.DateTimeField(auto_now_add=True)
+	reporting_time = models.DateTimeField()
 	reporter = models.ForeignKey('Traveller',related_name='report')
 	latitude = models.DecimalField(default=0.0,decimal_places=6,max_digits=10)
 	longitude = models.DecimalField(default=0.0,decimal_places=6,max_digits=10)
 	incident = models.IntegerField(choices=INCIDENT_TYPES,default=4)
-	usability = models.DecimalField(default=0.00,decimal_places=2,max_digits=3)
+	road = models.ForeignKey('Road',related_name='report')
 	information = models.ForeignKey('Information',related_name='report') #This would be deduced.
+	processed = models.IntegerField(default=0)
+	credits = models.IntegerField(default=0)
 	def __str__(self):
 		return self.reporter.name+"-"+str(self.reporting_time)
 
@@ -43,6 +45,8 @@ class Information(models.Model):
 	incident = models.IntegerField(choices=INCIDENT_TYPES,default=4)
 	trust = models.DecimalField(default=0.0,decimal_places=2,max_digits=3)
 	road = models.ForeignKey('Road',related_name='information')
+	last_report_time = models.DateTimeField()
+	report_count = models.IntegerField(default=1)
 	def __str__(self):
 		return self.road.name+"-"+str(self.trust)
 

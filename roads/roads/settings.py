@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rewardingroads',
+    'ws4redis',
     # 'rest_framework',
 ]
 
@@ -64,6 +65,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+		'ws4redis.context_processors.default',
             ],
         },
     },
@@ -118,5 +120,12 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
-
+WS4REDIS_CONNECTION = {
+    'host': 'localhost',
+    'port': 6379,
+}
+WS4REDIS_EXPIRE = 7200
+WS4REDIS_PREFIX = 'ws'
+WSGI_APPLICATION = 'ws4redis.django_runserver.application'
+WEBSOCKET_URL = '/ws/'
 STATIC_URL = '/static/'

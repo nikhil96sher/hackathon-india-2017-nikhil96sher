@@ -1,0 +1,228 @@
+{% extends 'rewardingroads/base.html' %}
+
+{% block content %}
+
+	<ol class="breadcrumb">
+	<li class="breadcrumb-item">
+		<a href="#">Dashboard</a>
+	</li>
+	<li class="breadcrumb-item active">Driving Simulator</li>
+	</ol>
+
+	<div class="row">
+		<div class="col-sm-5">
+			<div class="col-xl-12 col-sm-12 mb-3">
+				<div class="card text-white bg-success o-hidden">
+				<div class="card-body">
+					<div class="card-body-icon">
+					<i class="fa fa-fw fa-map-marker"></i>
+					</div>
+					<div class="mr-5" id="latitude">-</div>
+				</div>
+				<span class="card-footer text-white clearfix small z-1" href="#">
+					<span class="float-left">Current Latitude</span>
+				</span>
+				</div>
+			</div>
+			<div class="col-xl-12 col-sm-12 mb-3">
+				<div class="card text-white bg-success o-hidden">
+				<div class="card-body">
+					<div class="card-body-icon">
+					<i class="fa fa-fw fa-map-marker"></i>
+					</div>
+					<div class="mr-5" id="longitude">-</div>
+				</div>
+				<span class="card-footer text-white clearfix small z-1" href="#">
+					<span class="float-left">Current Longitude</span>
+				</span>
+				</div>
+			</div>
+			<div class="col-sm-12">
+				<div class="form-group">
+					<label>Road Travelling</label>
+					<select style="width: 100%" id="roadnumber">
+					{% for road in roads %}
+						<option value="{{road.pk}}">{{road}}</option>
+					{% endfor %}
+					</select> 
+				</div>
+
+				<div class="form-group">
+					<label>Road Condition</label>
+					<select style="width: 100%" class="o-hidden" id="roadcondition">
+						<option value="1">Very Poor</option>
+						<option value="2">Poor</option>
+						<option value="3">Average</option>
+						<option value="4">Good</option>
+						<option value="5">Very Good</option>
+					</select>
+				</div>
+				<button type="submit" class="btn btn-primary" onclick="generateDataSet(0,$('#roadcondition').val())">Generate Data</button>
+			</div>
+		</div>
+
+		<div class="row col-sm-7">
+			<div class="card">
+			<div class="card-header">
+			Reports Made
+			<span class="pull-right" id="counter"></span>
+			</div>
+			<div class="card-body">
+				<table class="table table-striped" id="reports">
+					<thead>
+						<tr>
+							<th>Latitude</th>
+							<th>Longitude</th>
+							<th>Type</th>
+							<th>Incident Time</th>
+						</tr>
+					</thead>
+					<tbody>
+					</tbody>
+				</table>
+			</div>
+			</div>
+		</div>
+
+	</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+url = '{{ WEBSOCKET_URI }}location{{user.name}}';
+var locationSocket = new WebSocket(url);
+
+latitude = {
+	aInternal: 10,
+	aListener: function(val) {
+		document.getElementById("latitude").innerHTML = val;
+	},
+	set a(val) {
+	this.aInternal = val;
+	this.aListener(val);
+	},
+	get a() {
+	return this.aInternal;
+	}
+}
+
+longitude = {
+	aInternal: 10,
+	aListener: function(val) {
+		document.getElementById("longitude").innerHTML = val;
+	},
+	set a(val) {
+	this.aInternal = val;
+	this.aListener(val);
+	},
+	get a() {
+	return this.aInternal;
+	}
+}
+
+var listData = [];
+var threshold = 0.1;
+function distance(oldLat,oldLon,newLat,newLon,times)
+{
+	return times*(Math.abs(oldLat-newLat) + Math.abs(oldLon-newLon))
+}
+
+var invocations = {
+	'1' : 10,
+	'2' : 7,
+	'3' : 5,
+	'4' : 3,
+	'5' : 1
+}
+
+var toBeChecked = JSON.parse("{{toBeChecked}}");
+var times = 1;
+function generateDataSet(time,type)
+{
+	$("#counter").html(time+"/"+invocations[type]);
+	if(time == 0)
+	{
+		$("#reports tbody tr").remove(); 
+	}
+	//generateData Randomly on the basis of information shared.
+	currentLat = latitude.a;
+	currentLon = longitude.a;
+	temp1 = parseFloat(currentLat)+parseFloat(Math.random()/10);
+	temp2 = parseFloat(currentLon)+parseFloat(Math.random()/10);
+	console.log(temp1);
+	latitude.a = temp1.toFixed(6);
+	longitude.a = temp2.toFixed(6);
+	locationSocket.send_message;
+	locationSocket.send("Sample Data");
+	var d = new Date();
+
+	for(i =0; i<toBeChecked.length;i++)
+	{
+		lat = toBeChecked[i][0];
+		lon = toBeChecked[i][1];
+		if(distance(currentLat,currentLon,lat,lon) != NaN && distance(currentLat,currentLon,lat,lon,1) < 5*threshold)
+		{
+			row = $("<tr></tr>");
+			col1 = $("<td>"+latitude.a+"</td>");
+			col2 = $("<td>"+longitude.a+"</td>");
+			col3 = $("<td>Confirmation</td>");
+			col4 = $("<td>"+d.toISOString()+"</td>");
+			row.append(col1,col2,col3,col4).prependTo("#reports");
+			toBeChecked.splice(i, 1);
+		}
+	}
+
+	if(distance(currentLat,currentLon,latitude.a,longitude.a,times) > threshold)
+	{
+		times = 1;
+		row = $("<tr></tr>");
+		col1 = $("<td>"+latitude.a+"</td>");
+		col2 = $("<td>"+longitude.a+"</td>");
+		col3 = $("<td>Random</td>");
+		col4 = $("<td>"+d.toISOString()+"</td>");
+		row.append(col1,col2,col3,col4).prependTo("#reports");		
+	}
+	else
+	{
+		times = times+1;
+	}
+	if(time < invocations[type])
+	{
+		setTimeout((function() {
+			generateDataSet(time+1,type);
+			}), 100/invocations[type]);
+	}
+	else
+	{
+		//Send Ajax Request with All the Data
+		var myRows = [];
+		var headers = $("#reports th");
+		var rows = $("#reports tbody tr").each(function(index) {
+			cells = $(this).find("td");
+			myRows[index] = {};
+			cells.each(function(cellIndex) {
+				myRows[index][$(headers[cellIndex]).html()] = $(this).html();
+			});
+		});
+		var myObj = {};
+		myObj.myrows = myRows;
+		myObj.road = $("#roadnumber").val();
+		$.ajax({
+		    url: '/roads/report/',
+		    type: 'POST',
+		    contentType: 'application/json; charset=utf-8',
+		    data: JSON.stringify(myObj),
+		    dataType: 'text',
+		    success: function(result) {
+					alert("Data Generated and Sent Successfully");
+		    }
+		});
+	}
+}
+
+navigator.geolocation.getCurrentPosition(function(location) {
+	latitude.a = location.coords.latitude;
+	longitude.a = location.coords.longitude;
+});
+</script>
+{% endblock %}
