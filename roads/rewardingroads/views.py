@@ -10,7 +10,7 @@ import json
 @user_session_set
 def index(request):
 	user = Traveller.objects.get(name=request.session['username'])
-	total_reports = Report.objects.filter(reporter=user)
+	total_reports = Report.objects.filter(reporter=user).exclude(trigger=3)
 	verified_reports = Report.objects.filter(reporter=user).filter(processed=1)
 	context = {
 		'user' : user,
@@ -19,20 +19,38 @@ def index(request):
 	}
 	return render(request,'rewardingroads/home.html',context)
 
+def govt(request):
+	operators = Operator.objects.order_by('penalty')
+	pendingReports = Report.objects.filter(processed=0).count()
+	pendingInformation = Information.objects.filter(status=0).count()
+	totalPenalty = 0
+	for operator in operators:
+		totalPenalty += operator.penalty
+	travellerCount = Traveller.objects.all().count()
+	context = {
+		'operators' : operators,
+		'pendingReports' : pendingReports,
+		'pendingInformation' : pendingInformation,
+		'travellerCount' : travellerCount,
+		'totalPenalty' : totalPenalty
+	}
+	return render(request,'rewardingroads/govt.html',context)
+
 @user_session_set
 def drive(request):
 	user = Traveller.objects.get(name=request.session['username'])
 	roads = Road.objects.all()
-	checked = Information.objects.filter(trust__lte=0.80)
+	unchecked = Information.objects.filter(status=0).filter(trust__lte=0.80)
 	complete = []
-	for info in checked:
-		temp = [float(info.latitude),float(info.longitude)]
+	for ind,info in enumerate(unchecked):
+		temp = [float(info.latitude),float(info.longitude),ind+1]
 		complete.append(temp)
 	final = json.dumps(complete)
 	context = {
 		'user' : user,
 		'roads' : roads,
-		'toBeChecked' : final
+		'toBeChecked' : final,
+		'unchecked' : unchecked
 	}
 	return render(request,'rewardingroads/drive.html',context)
 
@@ -45,6 +63,12 @@ def login(request):
 		return HttpResponseRedirect('/roads/')
 	return render(request,'rewardingroads/login.html')
 
+revmap = {
+	'Decelaration' : 1,
+	'Lane Switching' : 2,
+	'Confirmation' : 3
+}
+
 @csrf_exempt
 def report(request):
 	try:
@@ -53,9 +77,11 @@ def report(request):
 		road = Road.objects.get(pk = int(data['road']))
 		user = Traveller.objects.get(name = request.session['username'])
 		for report in rows:
+			print(report)
 			latitude = float(report['Latitude'])
 			longitude = float(report['Longitude'])
-			reporttype = report['Type']
+			trigger = revmap[report['Trigger Type']]
+			severity = int(report['Severity'])
 			time = report['Incident Time']
 			d = Report()
 			d.reporting_time = time
@@ -63,14 +89,22 @@ def report(request):
 			d.latitude = latitude
 			d.longitude = longitude
 			d.road = road
-			delta = 0.001
+			d.trigger = trigger
+			d.severity = severity
+
+			delta = 0.01
 			lat = round(latitude,4)
 			lon = round(longitude,4)
 			infos = Information.objects.filter(latitude__lte=lat+delta, latitude__gte=lat-delta).filter(longitude__lte=lon+delta, longitude__gte=lon-delta)
+
 			if(infos.count() != 0):
 				info = infos[0]
+				if trigger == 3 and severity <= 2:
+					info.status = 1
 				info.last_report_time = d.reporting_time
+				info.first_report_time = info.last_report_time
 				info.trust = ((info.report_count * info.trust) + (user.trust))/(info.report_count+1)
+				info.avg_severity = (info.avg_severity*info.report_count)/(info.report_count+1)
 				info.report_count += 1
 				info.save()
 			else:
@@ -80,6 +114,8 @@ def report(request):
 				info.trust = user.trust
 				info.road = road
 				info.last_report_time = d.reporting_time
+				info.first_report_time = info.last_report_time
+				info.avg_severity = severity
 				info.save()
 			d.information = info
 			d.save()

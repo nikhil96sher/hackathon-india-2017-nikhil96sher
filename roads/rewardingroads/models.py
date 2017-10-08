@@ -12,18 +12,31 @@ state_choices = (("Andhra Pradesh","Andhra Pradesh"),("Arunachal Pradesh ","Arun
 
 class Operator(models.Model):
 	name = models.CharField(max_length=255)
-	rating = models.DecimalField(default=3.00,max_digits=3,decimal_places=2)
+	penalty = models.FloatField(default=0)
 
 	def __str__(self):
 		return self.name
 
 class Traveller(models.Model):
-	unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True) #Unique ID is of a car, not a person
 	name = models.CharField(max_length=255)
-	trust = models.DecimalField(default=0.50,max_digits=3,decimal_places=2)
-	credits = models.IntegerField(default=0)
+	trust = models.FloatField(default=0.50)
+	credits = models.FloatField(default=0)
 	def __str__(self):
 		return self.name
+
+TRIGGERS = (
+	(1,"Decelaration"),
+	(2,"Lane Switching"),
+	(3,"Confirmation"),
+)
+
+ROAD_CONDITION = (
+	(1, "Very Poor"),
+	(2, "Poor"),
+	(3, "Average"),
+	(4, "Good"),
+	(5, "Very Good"),
+)
 
 #Need to combine some reportings into an information with a relevant trust score algorithm
 class Report(models.Model):
@@ -31,11 +44,13 @@ class Report(models.Model):
 	reporter = models.ForeignKey('Traveller',related_name='report')
 	latitude = models.DecimalField(default=0.0,decimal_places=6,max_digits=10)
 	longitude = models.DecimalField(default=0.0,decimal_places=6,max_digits=10)
-	incident = models.IntegerField(choices=INCIDENT_TYPES,default=4)
+	incident = models.IntegerField(choices=INCIDENT_TYPES,default=4) #Inferred from TRIGGERS
 	road = models.ForeignKey('Road',related_name='report')
-	information = models.ForeignKey('Information',related_name='report') #This would be deduced.
-	processed = models.IntegerField(default=0)
-	credits = models.IntegerField(default=0)
+	trigger = models.IntegerField(choices=TRIGGERS,default=1)
+	severity = models.IntegerField(choices=ROAD_CONDITION,default=3)
+	information = models.ForeignKey('Information',related_name='reports') #This would be deduced.
+	processed = models.IntegerField(default=0) #Whether affect of report has been considered?
+	credits = models.IntegerField(default=0) #Value given for this report?
 	def __str__(self):
 		return self.reporter.name+"-"+str(self.reporting_time)
 
@@ -43,10 +58,13 @@ class Information(models.Model):
 	latitude = models.DecimalField(default=0.0,decimal_places=4,max_digits=10)
 	longitude = models.DecimalField(default=0.0,decimal_places=4,max_digits=10)
 	incident = models.IntegerField(choices=INCIDENT_TYPES,default=4)
-	trust = models.DecimalField(default=0.0,decimal_places=2,max_digits=3)
+	trust = models.FloatField(default=0.0)
 	road = models.ForeignKey('Road',related_name='information')
 	last_report_time = models.DateTimeField()
+	first_report_time = models.DateTimeField()
+	avg_severity = models.FloatField(default=0)
 	report_count = models.IntegerField(default=1)
+	status = models.IntegerField(default=0)
 	def __str__(self):
 		return self.road.name+"-"+str(self.trust)
 

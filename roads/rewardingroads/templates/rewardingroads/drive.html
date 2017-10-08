@@ -4,14 +4,16 @@
 
 	<ol class="breadcrumb">
 	<li class="breadcrumb-item">
-		<a href="#">Dashboard</a>
+		<a href="/roads/">Dashboard</a>
 	</li>
 	<li class="breadcrumb-item active">Driving Simulator</li>
+	<li>
+		<span class="pull-right"><a href="/roads/govt/" target="_blank">Governemt Dashboard</a></span>
+	</li>
 	</ol>
 
 	<div class="row">
-		<div class="col-sm-5">
-			<div class="col-xl-12 col-sm-12 mb-3">
+			<div class="col-xl-2 col-sm-12 mb-3">
 				<div class="card text-white bg-success o-hidden">
 				<div class="card-body">
 					<div class="card-body-icon">
@@ -24,7 +26,7 @@
 				</span>
 				</div>
 			</div>
-			<div class="col-xl-12 col-sm-12 mb-3">
+			<div class="col-xl-2 col-sm-12 mb-3">
 				<div class="card text-white bg-success o-hidden">
 				<div class="card-body">
 					<div class="card-body-icon">
@@ -37,7 +39,7 @@
 				</span>
 				</div>
 			</div>
-			<div class="col-sm-12">
+			<div class="col-sm-3">
 				<div class="form-group">
 					<label>Road Travelling</label>
 					<select style="width: 100%" id="roadnumber">
@@ -46,22 +48,25 @@
 					{% endfor %}
 					</select> 
 				</div>
-
+			</div>
+			<div class="col-sm-3">
 				<div class="form-group">
-					<label>Road Condition</label>
+					<label>Road Condition (On a scale of 1-5)</label>
 					<select style="width: 100%" class="o-hidden" id="roadcondition">
-						<option value="1">Very Poor</option>
-						<option value="2">Poor</option>
-						<option value="3">Average</option>
-						<option value="4">Good</option>
-						<option value="5">Very Good</option>
+						<option value="1">1 - Very Poor</option>
+						<option value="2">2 - Poor</option>
+						<option value="3">3 - Average</option>
+						<option value="4">4 - Good</option>
+						<option value="5">5 - Very Good</option>
 					</select>
 				</div>
+			</div>
+			<div class="col-sm-2">
 				<button type="submit" class="btn btn-primary" onclick="generateDataSet(0,$('#roadcondition').val())">Generate Data</button>
 			</div>
-		</div>
-
-		<div class="row col-sm-7">
+	</div>
+	<div class="row">
+		<div class="col-sm-8">
 			<div class="card">
 			<div class="card-header">
 			Reports Made
@@ -73,7 +78,8 @@
 						<tr>
 							<th>Latitude</th>
 							<th>Longitude</th>
-							<th>Type</th>
+							<th>Trigger Type</th>
+							<th>Severity</th>
 							<th>Incident Time</th>
 						</tr>
 					</thead>
@@ -83,26 +89,57 @@
 			</div>
 			</div>
 		</div>
-
+		<div class="col-sm-4">
+			<div class="card">
+			<div class="card-header">
+			Pending Reports in Your route
+			<span class="pull-right" id="check-counter"></span>
+			</div>
+			<div class="card-body">
+				<table class="table table-striped" id="confirms">
+					<thead>
+						<tr>
+							<th>Latitude</th>
+							<th>Longitude</th>
+						</tr>
+					</thead>
+					<tbody>
+					{% for element in unchecked %}
+						<tr id="confirm-{{forloop.counter}}">
+							<td>{{element.latitude}}</td>
+							<td>{{element.longitude}}</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+			</div>
+		</div>
 	</div>
 {% endblock %}
 
 {% block script %}
 <script type="text/javascript">
-url = '{{ WEBSOCKET_URI }}location{{user.name}}';
-var locationSocket = new WebSocket(url);
+
+var triggerOptions = ["Decelaration","Lane Switching"];
+var severityOptions = [1,2,3,4,5];
+var invocations = {
+	'1' : 10,
+	'2' : 7,
+	'3' : 5,
+	'4' : 3,
+	'5' : 1
+}
 
 latitude = {
 	aInternal: 10,
-	aListener: function(val) {
-		document.getElementById("latitude").innerHTML = val;
-	},
+	aListener: function(val) {document.getElementById("latitude").innerHTML = val;},
 	set a(val) {
-	this.aInternal = val;
-	this.aListener(val);
+		this.aInternal = val;
+		this.aListener(val);
 	},
 	get a() {
-	return this.aInternal;
+		return this.aInternal;
 	}
 }
 
@@ -122,17 +159,10 @@ longitude = {
 
 var listData = [];
 var threshold = 0.1;
+
 function distance(oldLat,oldLon,newLat,newLon,times)
 {
 	return times*(Math.abs(oldLat-newLat) + Math.abs(oldLon-newLon))
-}
-
-var invocations = {
-	'1' : 10,
-	'2' : 7,
-	'3' : 5,
-	'4' : 3,
-	'5' : 1
 }
 
 var toBeChecked = JSON.parse("{{toBeChecked}}");
@@ -152,35 +182,44 @@ function generateDataSet(time,type)
 	console.log(temp1);
 	latitude.a = temp1.toFixed(6);
 	longitude.a = temp2.toFixed(6);
-	locationSocket.send_message;
-	locationSocket.send("Sample Data");
 	var d = new Date();
-
 	for(i =0; i<toBeChecked.length;i++)
 	{
 		lat = toBeChecked[i][0];
 		lon = toBeChecked[i][1];
-		if(distance(currentLat,currentLon,lat,lon) != NaN && distance(currentLat,currentLon,lat,lon,1) < 5*threshold)
+		ind = toBeChecked[i][2];
+		if(distance(currentLat,currentLon,lat,lon) != NaN && distance(currentLat,currentLon,lat,lon,1) < threshold)
 		{
+			severity = severityOptions[Math.floor(Math.random()*severityOptions.length)];
 			row = $("<tr></tr>");
 			col1 = $("<td>"+latitude.a+"</td>");
 			col2 = $("<td>"+longitude.a+"</td>");
 			col3 = $("<td>Confirmation</td>");
-			col4 = $("<td>"+d.toISOString()+"</td>");
-			row.append(col1,col2,col3,col4).prependTo("#reports");
+			col4 = $("<td>"+severity+"</td>");
+			col5 = $("<td>"+d.toISOString()+"</td>");
+			row.append(col1,col2,col3,col4,col5).prependTo("#reports");
+			if(severity <= 2)
+				$("#confirm-"+ind).addClass('bg-success');
+			else
+				$("#confirm-"+ind).addClass('bg-danger');
 			toBeChecked.splice(i, 1);
+			$("#check-counter").html({{unchecked|length}} - toBeChecked.length + "/" + {{unchecked|length}});
 		}
 	}
 
 	if(distance(currentLat,currentLon,latitude.a,longitude.a,times) > threshold)
 	{
 		times = 1;
+		trigger = triggerOptions[Math.floor(Math.random()*triggerOptions.length)];
+		severity = severityOptions[Math.floor(Math.random()*severityOptions.length)];
+
 		row = $("<tr></tr>");
 		col1 = $("<td>"+latitude.a+"</td>");
 		col2 = $("<td>"+longitude.a+"</td>");
-		col3 = $("<td>Random</td>");
-		col4 = $("<td>"+d.toISOString()+"</td>");
-		row.append(col1,col2,col3,col4).prependTo("#reports");		
+		col3 = $("<td>"+trigger+"</td>");
+		col4 = $("<td>"+severity+"</td>");
+		col5 = $("<td>"+d.toISOString()+"</td>");
+		row.append(col1,col2,col3,col4,col5).prependTo("#reports");
 	}
 	else
 	{
@@ -207,6 +246,7 @@ function generateDataSet(time,type)
 		var myObj = {};
 		myObj.myrows = myRows;
 		myObj.road = $("#roadnumber").val();
+		// alert("Bulk Uploading Data");
 		$.ajax({
 		    url: '/roads/report/',
 		    type: 'POST',
@@ -214,7 +254,7 @@ function generateDataSet(time,type)
 		    data: JSON.stringify(myObj),
 		    dataType: 'text',
 		    success: function(result) {
-					alert("Data Generated and Sent Successfully");
+					// alert("Data Successfully Uploaded");
 		    }
 		});
 	}

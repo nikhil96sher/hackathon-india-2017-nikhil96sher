@@ -9,11 +9,12 @@
 	</li>
 	<li class="breadcrumb-item active">My Dashboard</li>
 	<li>
-	<span class="pull-right"><a href="/roads/drive/" target="_blank">Driving Simulator</a></span>
+		<span class="pull-right"><a href="/roads/drive/" target="_blank">Driving Simulator</a></span>
 	</li>
-
+	<li>
+		<span class="pull-right"><a href="/roads/govt/" target="_blank">Government Dashboard</a></span>
+	</li>
 	</ol>
-
 
 	<div class="row">
 		<div class="col-xl-3 col-sm-3 mb-3">
@@ -46,7 +47,7 @@
 			<div class="card text-white bg-info o-hidden">
 			<div class="card-body">
 				<div class="card-body-icon">
-				<i class="fa fa-fw fa-shopping-cart"></i>
+				<i class="fa fa-fw fa-bar-chart"></i>
 				</div>
 				<div class="mr-5">{{ verified_reports|length }}/{{total_reports|length}}</div>
 			</div>
@@ -63,7 +64,7 @@
 			{% endif %}
 			<div class="card-body">
 				<div class="card-body-icon">
-				<i class="fa fa-fw fa-shopping-cart"></i>
+				<i class="fa fa-fw fa-check"></i>
 				</div>
 				<div class="mr-5">{{user.trust}}</div>
 			</div>
@@ -90,6 +91,8 @@
 						<th>Longitude</th>
 						<th>When</th>
 						<th>Where</th>
+						<th>Trigger</th>
+						<th>Severity</th>
 						<th>Status</th>
 					</tr>
 					</thead>
@@ -100,6 +103,8 @@
 						<td>{{report.longitude}}</td>
 						<td>{{report.reporting_time}}</td>
 						<td>{{report.road.name}}</td>
+						<td>{{report.trigger}}</td>
+						<td>{{report.severity}}</td>
 						{% if report.processed %}
 							<td>Verified. Received {{report.credits}}</td>
 						{% else %}

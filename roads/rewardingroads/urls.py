@@ -18,6 +18,7 @@ from rewardingroads.views import *
 urlpatterns = [
     url(r'drive/$', drive),
     url(r'login/$', login),
+    url(r'govt/$', govt),
     url(r'report/$', report),
     url(r'$', index),
 ]
