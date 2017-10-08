@@ -29,7 +29,18 @@ for information in infoAvailable:
 	operate = information.road.operator
 	operate.penalty += penalty
 	operate.save()
+	delta1 = 0
+	delta = 1
+	for report in infoAvailable[information]:
+		if abs(report.severity - information.avg_severity) < delta:
+			delta1 += 1
+
 	#get Information Trust - Deviation of Individual Reports from Severity
+	print("EXISTING TRUST : ",information.trust)
+	information.trust = information.trust + (1-information.trust)*(delta1/len(infoAvailable[information]))
+	print("NEW TRUST : ",information.trust)
+	information.save()
+
 	for report in infoAvailable[information]:
 		delta = worth*float(report.severity)*float(report.reporter.trust)
 		report.credits = delta

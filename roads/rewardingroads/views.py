@@ -6,6 +6,7 @@ from rewardingroads.forms import *
 from rewardingroads.decorators import *
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.conf import settings
 
 @user_session_set
 def index(request):
@@ -40,7 +41,7 @@ def govt(request):
 def drive(request):
 	user = Traveller.objects.get(name=request.session['username'])
 	roads = Road.objects.all()
-	unchecked = Information.objects.filter(status=0).filter(trust__lte=0.80)
+	unchecked = Information.objects.filter(status=0).filter(trust__lte=0.90)
 	complete = []
 	for ind,info in enumerate(unchecked):
 		temp = [float(info.latitude),float(info.longitude),ind+1]
@@ -50,7 +51,8 @@ def drive(request):
 		'user' : user,
 		'roads' : roads,
 		'toBeChecked' : final,
-		'unchecked' : unchecked
+		'unchecked' : unchecked,
+		'YOUR_API_KEY' : settings.YOUR_API_KEY
 	}
 	return render(request,'rewardingroads/drive.html',context)
 
@@ -77,12 +79,15 @@ def report(request):
 		road = Road.objects.get(pk = int(data['road']))
 		user = Traveller.objects.get(name = request.session['username'])
 		for report in rows:
-			print(report)
+			# print(report)
+			# Getting Request Parameters
 			latitude = float(report['Latitude'])
 			longitude = float(report['Longitude'])
 			trigger = revmap[report['Trigger Type']]
 			severity = int(report['Severity'])
 			time = report['Incident Time']
+
+			#Create Report Instance
 			d = Report()
 			d.reporting_time = time
 			d.reporter = user
@@ -92,6 +97,12 @@ def report(request):
 			d.trigger = trigger
 			d.severity = severity
 
+			# Create User Instance
+			user.last_latitude = latitude
+			user.last_longitude = longitude
+			user.save()
+
+			# Computing Information Instance
 			delta = 0.01
 			lat = round(latitude,4)
 			lon = round(longitude,4)
@@ -100,7 +111,9 @@ def report(request):
 			if(infos.count() != 0):
 				info = infos[0]
 				if trigger == 3 and severity <= 2:
+					print("YO CASE")
 					info.status = 1
+					info.save()
 				info.last_report_time = d.reporting_time
 				info.first_report_time = info.last_report_time
 				info.trust = ((info.report_count * info.trust) + (user.trust))/(info.report_count+1)

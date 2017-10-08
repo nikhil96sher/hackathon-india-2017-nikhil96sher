@@ -20,6 +20,8 @@ class Operator(models.Model):
 class Traveller(models.Model):
 	name = models.CharField(max_length=255)
 	trust = models.FloatField(default=0.50)
+	last_latitude = models.DecimalField(default=19.0760,decimal_places=6,max_digits=10)
+	last_longitude = models.DecimalField(default=72.8777,decimal_places=6,max_digits=10)
 	credits = models.FloatField(default=0)
 	def __str__(self):
 		return self.name
